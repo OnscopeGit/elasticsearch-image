@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
     <description>Image Plugin for ElasticSearch 2.3.2</description>
     <name>elasticsearch-image</name>
-    <url>https://github.com/f7anty/elasticsearch-image-2.2.0</url>
+    <url>https://github.com/OnscopeGit/elasticsearch-image</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
