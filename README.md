@@ -19,6 +19,8 @@ JAVA_HOME=<java_home> mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B 
 
 The plugin will be located at `target/releases/elasticsearch-image-X.X.X-SNAPSHOT.zip`.
 
+Note: You will have to compile the LIRE plugin (see previously mentioned link) in the same way you would this plugin (and possibly modify the `pom.xml` file) or you can use the [current release](https://github.com/OnscopeGit/elasticsearch-image/releases) file directly or in part. 
+
 
 |     Image Plugin          |  elasticsearch    | Release date |
 |---------------------------|-------------------|:------------:|
