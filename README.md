@@ -1,26 +1,56 @@
 Image Plugin for Elasticsearch
-==================================
+==============================
 
-[![Build Status](https://travis-ci.org/kzwang/elasticsearch-image.png?branch=master)](https://travis-ci.org/kzwang/elasticsearch-image)
-
-The Image Plugin is an Content Based Image Retrieval Plugin for Elasticsearch using [LIRE (Lucene Image Retrieval)](https://code.google.com/p/lire/). It allows users to index images and search for similar images.
+The Image Plugin is an Content Based Image Retrieval Plugin for Elasticsearch using [LIRE (Lucene Image Retrieval)](https://github.com/dermotte/lire). It allows users to index images and search for similar images.
 
 It adds an `image` field type and an `image` query
 
-See [http://demo.elasticsearch-image.com](http://demo.elasticsearch-image.com) for a demo of the plugin
+In order to install the plugin, simply run:
 
-In order to install the plugin, simply run: `bin/plugin -install com.github.kzwang/elasticsearch-image/1.2.0`.
+```sh
+bin\plugin install file:<path_to>/elasticsearch-image-X.X.X-SNAPSHOT.zip
+```
+
+You can create the plugin using Maven, simply run:
+
+```sh
+JAVA_HOME=<java_home> mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
+```
+
+The plugin will be located at `target/releases/elasticsearch-image-X.X.X-SNAPSHOT.zip`.
+
 
 |     Image Plugin          |  elasticsearch    | Release date |
 |---------------------------|-------------------|:------------:|
-| 1.3.0-SNAPSHOT (master)   | 1.1.0             |              |
+| 2.3.2                     | 2.3.2             | 2016-05-18   |
+| 2.2.0                     | 2.2.0             | 2016-04-20   |
+| 1.3.0-SNAPSHOT (master)   | 1.1.0             | 2014-09-04   |
 | 1.2.0                     | 1.0.1             | 2014-03-20   |
 | 1.1.0                     | 1.0.1             | 2014-03-13   |
 | 1.0.0                     | 1.0.1             | 2014-03-05   |
 
 
+## Developers:
+Kevin Wang <kzwang>
+
+f7anty <f7anty>
+
+OnscopeGit <OnscopeGit>
+
 ## Example
+#### Create Settings
+
+```sh
+{
+    "number_of_shards" : 5,
+    "number_of_replicas" : 2,
+    "index.version.created" : 2030299
+}
+```
+
+
 #### Create Mapping
+
 ```sh
 curl -XPUT 'localhost:9200/test/test/_mapping' -d '{
     "test": {
@@ -33,8 +63,7 @@ curl -XPUT 'localhost:9200/test/test/_mapping' -d '{
                     },
                     "JCD": {
                         "hash": ["BIT_SAMPLING", "LSH"]
-                    },
-                    "FCTH": {}
+                    }
                 },
                 "metadata": {
                     "jpeg.image_width": {
@@ -51,9 +80,10 @@ curl -XPUT 'localhost:9200/test/test/_mapping' -d '{
     }
 }'
 ```
-`type` should be `image`. **Mandatory**
+`type` should be `image`. This is the type register by this plugin. **Mandatory**
 
-`feature` is a map of features for index. **Mandatory, at least one is required**
+`feature` is a map of features for index. You can only search what you specific, e.g. base on example above, specific `JCD` with `LSH` in mapping allow search for it, but you cannot search `CEDD` with `LSH` 
+because the index mapping for `LSH` is not specific and created. If you not specific hash for a `feature`, it won't work. **Mandatory, at least one is required** 
 
 `hash` can be set if you want to search on hash. **Optional**
 
@@ -70,6 +100,8 @@ curl -XPOST 'localhost:9200/test/test' -d '{
 #### Search Image
 ```sh
 curl -XPOST 'localhost:9200/test/test/_search' -d '{
+	"from": 0,
+    "size": 3,
     "query": {
         "image": {
             "my_img": {
@@ -83,20 +115,18 @@ curl -XPOST 'localhost:9200/test/test/_search' -d '{
     }
 }'
 ```
-`feature` should be one of the features in the mapping.  **Mandatory**
+`feature` should be one of the features in the mapping. See above.  **Mandatory**
 
 `image` base64 of image to search.  **Optional if search using existing image**
 
-`hash` should be same to the hash set in mapping.  **Optional**
-
-`limit` limit the number of results returned (per shard) for scoring. **Optional, only works when `hash` is specified**
+`hash` should be same to the hash set in mapping. See Above.  **Optional**
 
 `boost` score boost  **Optional**
 
 
 #### Search Image using existing image in index
 ```sh
-curl -XPOST 'localhost:9200/test/test/_search' -d '{
+curl -XPOST 'localhost:9200/test/test/_search' -d '{ 	
     "query": {
         "image": {
             "my_img": {
@@ -104,7 +134,6 @@ curl -XPOST 'localhost:9200/test/test/_search' -d '{
                 "index": "test",
                 "type": "test",
                 "id": "image1",
-                "path": "my_image",
                 "hash": "BIT_SAMPLING"
             }
         }
@@ -117,13 +146,29 @@ curl -XPOST 'localhost:9200/test/test/_search' -d '{
 
 `id` the id of the document to fetch image from.  **Mandatory**
 
-`path` the field specified as path to fetch image from.  **Mandatory**
+`field` the field specified as path to fetch image from. Example above is "my_img **Optional**
 
 `routing` a custom routing value to be used when retrieving the external image doc.  **Optional**
 
+### image query Builder
+```sh
+SearchRequestBuilder queryBuilder = searchClient.prepareSearch(INDEX)
+		.setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+		.setTypes("Image")
+		.setFrom(from)
+		.setSize(size);
+	
+	ImageQueryBuilder query = new ImageQueryBuilder("img");  //image field
+	query.feature(feature);
+	query.hash(hash);
+	query.lookupIndex(INDEX);
+	query.lookupType("Image");
+	query.lookupId(itemId);	
+```
+
 
 ### Metadata
-Metadata are extracted using [metadata-extractor](https://code.google.com/p/metadata-extractor/). See [SampleOutput](https://code.google.com/p/metadata-extractor/wiki/SampleOutput) for some examples of metadata.
+Metadata are extracted using [metadata-extractor](https://github.com/drewnoakes/metadata-extractor/). See [SampleOutput](https://github.com/drewnoakes/metadata-extractor/wiki/SampleOutput) for some examples of metadata.
 
 The field name in index will be `directory.tag_name`, all lower case and space becomes underscore(`_`). e.g. if the *Directory* is `JPEG` and *Tag Name* is `Image Height`, the field name will be `jpeg.image_height`
 
@@ -136,11 +181,11 @@ Additional formats can be supported by ImageIO plugins, for example [TwelveMonke
 
 
 ### Supported Features
-[`AUTO_COLOR_CORRELOGRAM`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/AutoColorCorrelogram.java),  [`BINARY_PATTERNS_PYRAMID`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/BinaryPatternsPyramid.java), [`CEDD`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/CEDD.java), [`SIMPLE_COLOR_HISTOGRAM`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/SimpleColorHistogram.java), [`COLOR_LAYOUT`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/ColorLayout.java), [`EDGE_HISTOGRAM`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/EdgeHistogram.java), [`FCTH`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/FCTH.java), [`GABOR`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/Gabor.java), [`JCD`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/JCD.java), [`JOINT_HISTOGRAM`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/joint/JointHistogram.java), [`JPEG_COEFFICIENT_HISTOGRAM`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/JpegCoefficientHistogram.java), [`LOCAL_BINARY_PATTERNS`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/LocalBinaryPatterns.java), [`LUMINANCE_LAYOUT`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/LuminanceLayout.java), [`OPPONENT_HISTOGRAM`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/OpponentHistogram.java), [`PHOG`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/PHOG.java), [`ROTATION_INVARIANT_LOCAL_BINARY_PATTERNS`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/RotationInvariantLocalBinaryPatterns.java), [`SCALABLE_COLOR`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/ScalableColor.java), [`TAMURA`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/imageanalysis/Tamura.java)
+[`AUTO_COLOR_CORRELOGRAM`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/AutoColorCorrelogram.java),  [`BINARY_PATTERNS_PYRAMID`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/BinaryPatternsPyramid.java), [`CEDD`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/CEDD.java), [`COLOR_LAYOUT`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/ColorLayout.java), [`EDGE_HISTOGRAM`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/EdgeHistogram.java), [`FCTH`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/FCTH.java), [`FUZZY_COLOR_HISTOGRAM`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/FuzzyColorHistogram.java), [`FUZZY_OPPONENT_HISTOGRAM`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/FuzzyOpponentHistogram.java), [`GABOR`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/Gabor.java), [`JCD`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/JCD.java), [`JOINT_HISTOGRAM`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/joint/JointHistogram.java), [`JPEG_COEFFICIENT_HISTOGRAM`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/JpegCoefficientHistogram.java), [`LOCAL_BINARY_PATTERNS`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/LocalBinaryPatterns.java), [`LOCAL_BINARY_PATTERNS_AND_OPPONENT`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/joint/LocalBinaryPatternsAndOpponent.java), [`LUMINANCE_LAYOUT`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/LuminanceLayout.java), [`OPPONENT_HISTOGRAM`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/OpponentHistogram.java), [`PHOG`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/PHOG.java), [`RANK_AND_OPPONENT`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/joint/RankAndOpponent.java), [`ROTATION_INVARIANT_LOCAL_BINARY_PATTERNS`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/RotationInvariantLocalBinaryPatterns.java), [`SCALABLE_COLOR`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/ScalableColor.java), [`SIMPLE_CENTRIST`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/centrist/SimpleCentrist.java), [`SPATIAL_PYRAMID_CENTRIST`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/centrist/SpatialPyramidCentrist.java), [`SIMPLE_COLOR_HISTOGRAM`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/SimpleColorHistogram.java), [`SPACC`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/spatialpyramid/SPACC.java), [`SPCEDD`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/spatialpyramid/SPCEDD.java), [`SPFCTH`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/spatialpyramid/SPFCTH.java), [`SPJCD`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/spatialpyramid/SPJCD.java), [`SPLBP`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/spatialpyramid/SPLBP.java), [`TAMURA`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/imageanalysis/features/global/Tamura.java)
 
 
 ### Supported Hash Mode
-[`BIT_SAMPLING`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/indexing/hashing/BitSampling.java), [`LSH`](https://code.google.com/p/lire/source/browse/trunk/src/main/java/net/semanticmetadata/lire/indexing/hashing/LocalitySensitiveHashing.java)
+[`BIT_SAMPLING`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/indexers/hashing/BitSampling.java), [`LSH`](https://github.com/dermotte/LIRE/blob/master/src/main/java/net/semanticmetadata/lire/indexers/hashing/LocalitySensitiveHashing.java)
 
 Hash will increase search speed with large data sets
 
@@ -154,6 +199,15 @@ See [Large image data sets with LIRE ?some new numbers](http://www.semanticmetad
 | index.image.ignore_metadata_error| ignore errors happened during extract metadata from image | True |
 
 ## ChangeLog
+
+#### 2.3.2 (2016-05-18)
+
+- upgrade to lire 1.0b2.
+*reindex is needed if using difference version of LIRE.
+
+#### 2.2.0 (2016-03-01)
+
+#### 2.1.1 (2016-01-06)
 
 #### 1.2.0 (2014-03-20)
 

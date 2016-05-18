@@ -1,10 +1,11 @@
 package org.elasticsearch.index.query.image;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 
-import net.semanticmetadata.lire.imageanalysis.LireFeature;
-import net.semanticmetadata.lire.indexing.hashing.BitSampling;
-import net.semanticmetadata.lire.indexing.hashing.LocalitySensitiveHashing;
-import net.semanticmetadata.lire.utils.ImageUtils;
+import javax.imageio.ImageIO;
+
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -15,7 +16,6 @@ import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.inject.Inject;
-import org.elasticsearch.common.io.stream.BytesStreamInput;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.index.get.GetField;
 import org.elasticsearch.index.mapper.image.FeatureEnum;
@@ -25,9 +25,15 @@ import org.elasticsearch.index.query.QueryParseContext;
 import org.elasticsearch.index.query.QueryParser;
 import org.elasticsearch.index.query.QueryParsingException;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
+//import net.semanticmetadata.lire.imageanalysis.LireFeature;
+//import net.semanticmetadata.lire.indexing.hashing.BitSampling;
+//import net.semanticmetadata.lire.indexing.hashing.LocalitySensitiveHashing;
+import net.semanticmetadata.lire.imageanalysis.features.Extractor;
+import net.semanticmetadata.lire.imageanalysis.features.LireFeature;
+import net.semanticmetadata.lire.indexers.hashing.BitSampling;
+import net.semanticmetadata.lire.indexers.hashing.LocalitySensitiveHashing;
+import net.semanticmetadata.lire.utils.ImageUtils;
+
 
 public class ImageQueryParser implements QueryParser {
 
@@ -45,15 +51,16 @@ public class ImageQueryParser implements QueryParser {
         return new String[] {NAME};
     }
 
-    @Override
+    @SuppressWarnings("deprecation")
+	@Override
     public Query parse(QueryParseContext parseContext) throws IOException, QueryParsingException {
         XContentParser parser = parseContext.parser();
 
         XContentParser.Token token = parser.nextToken();
         if (token != XContentParser.Token.FIELD_NAME) {
-            throw new QueryParsingException(parseContext.index(), "[image] query malformed, no field");
+        	
+        	throw new QueryParsingException(parseContext, "[image] query malformed, no field");
         }
-
 
         String fieldName = parser.currentName();
         FeatureEnum featureEnum = null;
@@ -67,7 +74,6 @@ public class ImageQueryParser implements QueryParser {
         String lookupId = null;
         String lookupPath = null;
         String lookupRouting = null;
-
 
         token = parser.nextToken();
         if (token == XContentParser.Token.START_OBJECT) {
@@ -97,7 +103,7 @@ public class ImageQueryParser implements QueryParser {
                     } else if ("routing".equals(currentFieldName)) {
                         lookupRouting = parser.textOrNull();
                     } else {
-                        throw new QueryParsingException(parseContext.index(), "[image] query does not support [" + currentFieldName + "]");
+                    	throw new QueryParsingException(parseContext,  "[image] query does not support [" + currentFieldName + "]");
                     }
                 }
             }
@@ -105,7 +111,7 @@ public class ImageQueryParser implements QueryParser {
         }
 
         if (featureEnum == null) {
-            throw new QueryParsingException(parseContext.index(), "No feature specified for image query");
+        	throw new QueryParsingException(parseContext,  "No feature specified for image query");
         }
 
         String luceneFieldName = fieldName + "." + featureEnum.name();
@@ -114,11 +120,12 @@ public class ImageQueryParser implements QueryParser {
         if (image != null) {
             try {
                 feature = featureEnum.getFeatureClass().newInstance();
-                BufferedImage img = ImageIO.read(new BytesStreamInput(image, false));
+                BufferedImage img = ImageIO.read(new  ByteArrayInputStream(image));
                 if (Math.max(img.getHeight(), img.getWidth()) > ImageMapper.MAX_IMAGE_DIMENSION) {
                     img = ImageUtils.scaleImage(img, ImageMapper.MAX_IMAGE_DIMENSION);
                 }
-                feature.extract(img);
+                ((Extractor)feature).extract(img);
+                //feature.extract(img);
             } catch (Exception e) {
                 throw new ElasticsearchImageProcessException("Failed to parse image", e);
             }
@@ -136,21 +143,32 @@ public class ImageQueryParser implements QueryParser {
                         throw new ElasticsearchImageProcessException("Failed to parse image", e);
                     }
                 }
+
+            }
+            else{
+                try {
+                    feature = featureEnum.getFeatureClass().newInstance();
+                }
+                catch (Exception e) {
+                    throw new ElasticsearchImageProcessException("Failed to initial feature", e);
+                }
+
             }
         }
         if (feature == null) {
-            throw new QueryParsingException(parseContext.index(), "No image specified for image query");
+            throw new QueryParsingException(parseContext, "No image specified for image query");
         }
-
 
         if (hashEnum == null) {  // no hash, need to scan all documents
             return new ImageQuery(luceneFieldName, feature, boost);
         } else {  // query by hash first
             int[] hash = null;
             if (hashEnum.equals(HashEnum.BIT_SAMPLING)) {
-                hash = BitSampling.generateHashes(feature.getDoubleHistogram());
+                hash = BitSampling.generateHashes(feature.getFeatureVector());
+                //hash = BitSampling.generateHashes(feature.getDoubleHistogram());
             } else if (hashEnum.equals(HashEnum.LSH)) {
-                hash = LocalitySensitiveHashing.generateHashes(feature.getDoubleHistogram());
+                hash = LocalitySensitiveHashing.generateHashes(feature.getFeatureVector());
+                //hash = LocalitySensitiveHashing.generateHashes(feature.getDoubleHistogram());
             }
             String hashFieldName = luceneFieldName + "." + ImageMapper.HASH + "." + hashEnum.name();
 

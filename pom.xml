@@ -1,57 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <name>elasticsearch-image</name>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
-    <groupId>com.github.kzwang</groupId>
+    <groupId>com.github.f7anty</groupId>
     <artifactId>elasticsearch-image</artifactId>
-    <version>1.3.0-SNAPSHOT</version>
+    <version>2.3.2-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <description>Image Plugin for ElasticSearch</description>
-    <url>http://github.com/kzwang/elasticsearch-image</url>
-
-
-    <licenses>
-        <license>
-            <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
-    <scm>
-        <connection>scm:git:git@github.com:kzwang/elasticsearch-image.git</connection>
-        <developerConnection>scm:git:git@github.com:kzwang/elasticsearch-image.git</developerConnection>
-        <url>http://github.com/kzwang/elasticsearch-image</url>
-    </scm>
-
-    <developers>
-        <developer>
-            <id>kzwang</id>
-            <name>Kevin Wang</name>
-            <email>kevin807359@gmail.com</email>
-        </developer>
-    </developers>
-
-    <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>7</version>
-    </parent>
+    <description>Image Plugin for ElasticSearch 2.3.2</description>
+    <name>elasticsearch-image</name>
+    <url>https://github.com/f7anty/elasticsearch-image-2.2.0</url>
 
     <properties>
-        <elasticsearch.version>1.3.2</elasticsearch.version>
-        <lucene.version>4.9.0</lucene.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <elasticsearch.version>2.3.2</elasticsearch.version>
+        <lucene.version>5.5.0</lucene.version>
         <tests.jvms>1</tests.jvms>
         <tests.shuffle>true</tests.shuffle>
         <tests.output>onerror</tests.output>
         <es.logger.level>INFO</es.logger.level>
     </properties>
-
     <dependencies>
+        <dependency>
+            <groupId>org.hamcrest</groupId>
+            <artifactId>hamcrest-all</artifactId>
+            <version>1.3</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope> test</scope>
+            <exclusions>
+                <exclusion>
+                    <artifactId>hamcrest-core</artifactId>
+                    <groupId>org.hamcrest</groupId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-test-framework</artifactId>
             <version>${lucene.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>junit </groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>junit4-ant</artifactId>
+                    <groupId>
+                        com.carrotsearch.randomizedtesting
+                    </groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -60,23 +67,23 @@
             <version>${elasticsearch.version}</version>
             <scope>compile</scope>
         </dependency>
-
         <dependency>
-            <groupId>com.github.kzwang</groupId>  <!-- Modified to deploy on maven -->
+            <groupId>net.semanticmetadata</groupId>
             <artifactId>lire</artifactId>
-            <version>0.9.4-kzwang-beta1</version>
+            <!-- <version>0.9.5-SNAPSHOT</version> -->
+            <version>1.0b2-SNAPSHOT</version>
         </dependency>
-
         <dependency>
-            <groupId>com.twelvemonkeys.imageio</groupId> <!-- Some jpg images failed to parse by standard Java ImageIO, this plugin will fix that -->
+            <groupId>com.twelvemonkeys.imageio</groupId>
+            <!-- Some jpg images failed to parse by standard Java ImageIO, this plugin will fix that -->
             <artifactId>imageio-jpeg</artifactId>
-            <version>3.0-rc5</version>
+            <version>3.2.1</version>
         </dependency>
 
         <dependency>
             <groupId>com.drewnoakes</groupId>
             <artifactId>metadata-extractor</artifactId>
-            <version>2.6.2</version>
+            <version>2.9.0</version>
         </dependency>
 
         <dependency>
@@ -94,14 +101,7 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-all</artifactId>
-            <version>1.3</version>
-            <scope>test</scope>
-        </dependency>
-
-        <!-- TODO: change to commons-imaging when it's released -->
+        <!--TODO: change to commons-imaging when it's released-->
         <dependency>
             <groupId>org.apache.sanselan</groupId>
             <artifactId>sanselan</artifactId>
@@ -112,10 +112,16 @@
         <dependency>
             <groupId>com.twelvemonkeys.imageio</groupId>
             <artifactId>imageio-tiff</artifactId>
-            <version>3.0-rc5</version>
+            <version>3.2.1</version>
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>4.2.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -141,14 +147,14 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>2.3.2</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>com.carrotsearch.randomizedtesting</groupId>
                 <artifactId>junit4-maven-plugin</artifactId>
-                <version>2.0.15</version>
+                <version>2.3.3</version>
                 <executions>
                     <execution>
                         <id>tests</id>
@@ -161,8 +167,12 @@
                             <jvmOutputAction>pipe,warn</jvmOutputAction>
                             <leaveTemporary>true</leaveTemporary>
                             <listeners>
-                                <report-ant-xml mavenExtensions="true" dir="${project.build.directory}/surefire-reports" />
-                                <report-text showThrowable="true" showStackTraces="true" showOutput="${tests.output}" showStatusOk="false" showStatusError="true" showStatusFailure="true" showStatusIgnored="true" showSuiteSummary="true" timestamps="false" />
+                                <report-ant-xml mavenExtensions="true"
+                                                dir="${project.build.directory}/surefire-reports" />
+                                <report-text showThrowable="true" showStackTraces="true"
+                                             showOutput="${tests.output}" showStatusOk="false"
+                                             showStatusError="true" showStatusFailure="true"
+                                             showStatusIgnored="true" showSuiteSummary="true" timestamps="false" />
                                 <report-execution-times file="${basedir}/.local-execution-hints.log" />
                             </listeners>
                             <assertions>

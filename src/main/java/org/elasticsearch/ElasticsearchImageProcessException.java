@@ -3,7 +3,12 @@ package org.elasticsearch;
 
 public class ElasticsearchImageProcessException extends ElasticsearchException {
 
-    public ElasticsearchImageProcessException(String msg) {
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = -2137042158402309013L;
+
+	public ElasticsearchImageProcessException(String msg) {
         super(msg);
     }
 
